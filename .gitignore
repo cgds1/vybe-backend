@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+yarn.lock
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# Documentation
+/docs/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Generated files
+/generated/
+.eslintcache
+
+# OS
+Thumbs.db
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Test scripts
+/scripts/testing/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Claude internal — never commit
+claude/
