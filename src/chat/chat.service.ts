@@ -4,6 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { MessagesQueryDto } from './dto/messages-query.dto';
 import { MessageType } from '@prisma/client';
@@ -15,7 +16,10 @@ const OTHER_PROFILE_SELECT = {
 
 @Injectable()
 export class ChatService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   async openChat(matchId: string, userId: string) {
     const match = await this.prisma.match.findUnique({ where: { id: matchId } });
@@ -141,7 +145,34 @@ export class ChatService {
       }),
     ]);
 
+    void this.notifyMessageRecipient(chatId, userId, dto.content.slice(0, 100));
+
     return message;
+  }
+
+  private async notifyMessageRecipient(
+    chatId: string,
+    senderId: string,
+    body: string,
+  ): Promise<void> {
+    const [senderProfile, otherParticipant] = await Promise.all([
+      this.prisma.profile.findUnique({
+        where: { userId: senderId },
+        select: { displayName: true },
+      }),
+      this.prisma.chatParticipant.findFirst({
+        where: { chatId, NOT: { userId: senderId } },
+        select: { userId: true },
+      }),
+    ]);
+
+    if (!otherParticipant) return;
+
+    await this.notifications.sendToUser(
+      otherParticipant.userId,
+      senderProfile?.displayName ?? 'Nuevo mensaje',
+      body,
+    );
   }
 
   private async assertParticipant(chatId: string, userId: string) {

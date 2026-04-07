@@ -6,6 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { SwipeDto } from './dto/swipe.dto';
 
 const PROFILE_SELECT = {
@@ -18,7 +19,10 @@ const PROFILE_SELECT = {
 
 @Injectable()
 export class MatchesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   async swipe(userId: string, dto: SwipeDto) {
     if (userId === dto.targetId) {
@@ -47,10 +51,32 @@ export class MatchesService {
         match = await this.prisma.match.create({
           data: { user1Id, user2Id },
         });
+
+        await this.notifyMatch(userId, dto.targetId);
       }
     }
 
     return { swipe, match };
+  }
+
+  private async notifyMatch(userAId: string, userBId: string): Promise<void> {
+    const [profileA, profileB] = await Promise.all([
+      this.prisma.profile.findUnique({ where: { userId: userAId }, select: { displayName: true } }),
+      this.prisma.profile.findUnique({ where: { userId: userBId }, select: { displayName: true } }),
+    ]);
+
+    await Promise.all([
+      this.notifications.sendToUser(
+        userAId,
+        '¡Es un match! 🎉',
+        `${profileB?.displayName ?? 'Alguien'} también te dio like`,
+      ),
+      this.notifications.sendToUser(
+        userBId,
+        '¡Es un match! 🎉',
+        `${profileA?.displayName ?? 'Alguien'} también te dio like`,
+      ),
+    ]);
   }
 
   async getMyMatches(userId: string) {

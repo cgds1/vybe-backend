@@ -9,6 +9,7 @@ import {
 import { UploadApiResponse, v2 as CloudinaryType } from 'cloudinary';
 import * as streamifier from 'streamifier';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CLOUDINARY } from './cloudinary.provider';
 import { MessageType } from '@prisma/client';
 
@@ -20,6 +21,7 @@ export class FilesService {
   constructor(
     @Inject(CLOUDINARY) private readonly cloudinary: typeof CloudinaryType,
     private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async uploadAvatar(userId: string, file: Express.Multer.File): Promise<{ url: string }> {
@@ -63,7 +65,30 @@ export class FilesService {
       }),
     ]);
 
+    void this.notifyImageRecipient(chatId, userId);
+
     return message;
+  }
+
+  private async notifyImageRecipient(chatId: string, senderId: string): Promise<void> {
+    const [senderProfile, otherParticipant] = await Promise.all([
+      this.prisma.profile.findUnique({
+        where: { userId: senderId },
+        select: { displayName: true },
+      }),
+      this.prisma.chatParticipant.findFirst({
+        where: { chatId, NOT: { userId: senderId } },
+        select: { userId: true },
+      }),
+    ]);
+
+    if (!otherParticipant) return;
+
+    await this.notifications.sendToUser(
+      otherParticipant.userId,
+      senderProfile?.displayName ?? 'Nuevo mensaje',
+      'Te envió una imagen',
+    );
   }
 
   private validateFile(file: Express.Multer.File): void {
