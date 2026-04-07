@@ -6,19 +6,198 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id                String    @id @default(uuid())
-  email             String    @unique
-  password          String
-  name              String
-  refreshToken      String?
-  isVerified        Boolean   @default(false)
-  verifyCode        String?
-  verifyCodeExpiry  DateTime?
-  resetCode         String?
-  resetCodeExpiry   DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+// ─── Enums ───────────────────────────────────────────────────────────────────
 
+enum SwipeAction {
+  LIKE
+  PASS
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+}
+
+enum FileAssetType {
+  AVATAR
+  CHAT_IMAGE
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  password         String
+  refreshToken     String?
+  isVerified       Boolean   @default(false)
+  verifyCode       String?
+  verifyCodeExpiry DateTime?
+  resetCode        String?
+  resetCodeExpiry  DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  profile          Profile?
+  swipesGiven      SwipeRecord[]    @relation("SwipeGiver")
+  swipesReceived   SwipeRecord[]    @relation("SwipeTarget")
+  matchesAs1       Match[]          @relation("MatchUser1")
+  matchesAs2       Match[]          @relation("MatchUser2")
+  friendsInitiated Friendship[]     @relation("FriendshipInitiator")
+  friendsReceived  Friendship[]     @relation("FriendshipReceiver")
+  chatParticipants ChatParticipant[]
+  messagesSent     Message[]
+  deviceTokens     DeviceToken[]
+  fileAssets       FileAsset[]
+
+  @@index([email])
   @@map("users")
+}
+
+model Profile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  displayName String
+  age         Int
+  bio         String?
+  interests   String[]
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("profiles")
+}
+
+model SwipeRecord {
+  id        String      @id @default(cuid())
+  userId    String
+  targetId  String
+  action    SwipeAction
+  createdAt DateTime    @default(now())
+
+  user      User        @relation("SwipeGiver", fields: [userId], references: [id], onDelete: Cascade)
+  target    User        @relation("SwipeTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetId])
+  @@index([userId])
+  @@index([targetId])
+  @@index([createdAt])
+  @@map("swipe_records")
+}
+
+model Match {
+  id        String   @id @default(cuid())
+  user1Id   String
+  user2Id   String
+  createdAt DateTime @default(now())
+
+  user1     User     @relation("MatchUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2     User     @relation("MatchUser2", fields: [user2Id], references: [id], onDelete: Cascade)
+  chat      Chat?
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id])
+  @@index([user2Id])
+  @@index([createdAt])
+  @@map("matches")
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  initiatorId String
+  receiverId  String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  initiator   User             @relation("FriendshipInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  receiver    User             @relation("FriendshipReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([initiatorId, receiverId])
+  @@index([initiatorId])
+  @@index([receiverId])
+  @@index([status])
+  @@index([updatedAt])
+  @@map("friendships")
+}
+
+model Chat {
+  id           String            @id @default(cuid())
+  matchId      String?           @unique
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  match        Match?            @relation(fields: [matchId], references: [id], onDelete: SetNull)
+  participants ChatParticipant[]
+  messages     Message[]
+
+  @@index([updatedAt])
+  @@map("chats")
+}
+
+model ChatParticipant {
+  id       String   @id @default(cuid())
+  chatId   String
+  userId   String
+  joinedAt DateTime @default(now())
+
+  chat     Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId])
+  @@index([chatId])
+  @@index([userId])
+  @@map("chat_participants")
+}
+
+model Message {
+  id        String      @id @default(cuid())
+  chatId    String
+  senderId  String
+  content   String
+  type      MessageType @default(TEXT)
+  createdAt DateTime    @default(now())
+
+  chat      Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender    User        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([chatId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model DeviceToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_tokens")
+}
+
+model FileAsset {
+  id        String        @id @default(cuid())
+  userId    String
+  url       String
+  type      FileAssetType
+  createdAt DateTime      @default(now())
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@map("file_assets")
 }
