@@ -1,0 +1,143 @@
+import {
+  WebSocketGateway,
+  WebSocketServer,
+  SubscribeMessage,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  MessageBody,
+  ConnectedSocket,
+} from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
+import { JwtService } from '@nestjs/jwt';
+import { MessageType } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+
+@WebSocketGateway({ cors: { origin: '*' } })
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  @WebSocketServer() server: Server;
+
+  constructor(
+    private jwtService: JwtService,
+    private prisma: PrismaService,
+  ) {}
+
+  async handleConnection(socket: Socket) {
+    const token =
+      (socket.handshake.auth?.token as string) ||
+      (socket.handshake.query?.token as string);
+
+    if (!token) {
+      socket.disconnect();
+      return;
+    }
+
+    try {
+      const payload = this.jwtService.verify<{ sub: string }>(token);
+      socket.data.userId = payload.sub;
+    } catch {
+      socket.disconnect();
+    }
+  }
+
+  handleDisconnect(_socket: Socket) {}
+
+  @SubscribeMessage('join_chat')
+  async handleJoinChat(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: { chatId: string },
+  ) {
+    const { chatId } = data;
+    const userId: string = socket.data.userId;
+
+    const participant = await this.prisma.chatParticipant.findUnique({
+      where: { chatId_userId: { chatId, userId } },
+    });
+
+    if (!participant) {
+      socket.emit('error', { message: 'Access denied' });
+      return;
+    }
+
+    socket.join(chatId);
+  }
+
+  @SubscribeMessage('leave_chat')
+  async handleLeaveChat(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: { chatId: string },
+  ) {
+    const { chatId } = data;
+    const userId: string = socket.data.userId;
+
+    const participant = await this.prisma.chatParticipant.findUnique({
+      where: { chatId_userId: { chatId, userId } },
+    });
+
+    if (!participant) {
+      socket.emit('error', { message: 'Access denied' });
+      return;
+    }
+
+    socket.leave(chatId);
+  }
+
+  @SubscribeMessage('send_message')
+  async handleSendMessage(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: { chatId: string; content: string; type?: MessageType },
+  ) {
+    const { chatId, content, type } = data;
+    const userId: string = socket.data.userId;
+
+    const participant = await this.prisma.chatParticipant.findUnique({
+      where: { chatId_userId: { chatId, userId } },
+    });
+
+    if (!participant) {
+      socket.emit('error', { message: 'Access denied' });
+      return;
+    }
+
+    const [message] = await this.prisma.$transaction([
+      this.prisma.message.create({
+        data: {
+          chatId,
+          senderId: userId,
+          content,
+          type: type ?? MessageType.TEXT,
+        },
+      }),
+      this.prisma.chat.update({
+        where: { id: chatId },
+        data: { updatedAt: new Date() },
+      }),
+    ]);
+
+    this.server.to(chatId).emit('new_message', {
+      id: message.id,
+      chatId: message.chatId,
+      senderId: message.senderId,
+      content: message.content,
+      type: message.type,
+      createdAt: message.createdAt,
+    });
+  }
+
+  @SubscribeMessage('typing')
+  handleTyping(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: { chatId: string },
+  ) {
+    const userId: string = socket.data.userId;
+    socket.to(data.chatId).emit('user_typing', { chatId: data.chatId, userId });
+  }
+
+  @SubscribeMessage('stop_typing')
+  handleStopTyping(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() data: { chatId: string },
+  ) {
+    const userId: string = socket.data.userId;
+    socket.to(data.chatId).emit('user_stop_typing', { chatId: data.chatId, userId });
+  }
+}
