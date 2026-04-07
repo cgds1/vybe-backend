@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -15,6 +16,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
+    private config: ConfigService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -72,7 +74,9 @@ export class AuthService {
   async refreshTokens(refreshToken: string) {
     let payload: { sub: string; email: string };
     try {
-      payload = this.jwt.verify(refreshToken);
+      payload = this.jwt.verify(refreshToken, {
+        secret: this.config.getOrThrow('JWT_REFRESH_SECRET'),
+      });
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -109,8 +113,14 @@ export class AuthService {
     const payload = { sub: userId, email };
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwt.signAsync(payload, { expiresIn: '15m' }),
-      this.jwt.signAsync(payload, { expiresIn: '7d' }),
+      this.jwt.signAsync(payload, {
+        secret: this.config.getOrThrow('JWT_SECRET'),
+        expiresIn: '15m',
+      }),
+      this.jwt.signAsync(payload, {
+        secret: this.config.getOrThrow('JWT_REFRESH_SECRET'),
+        expiresIn: '30d',
+      }),
     ]);
 
     return { accessToken, refreshToken };
