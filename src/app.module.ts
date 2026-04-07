@@ -10,6 +10,7 @@ import { MatchesModule } from './matches/matches.module';
 import { FriendshipsModule } from './friendships/friendships.module';
 import { ChatModule } from './chat/chat.module';
 import { GatewayModule } from './gateway/gateway.module';
+import { FilesModule } from './files/files.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
@@ -26,6 +27,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     FriendshipsModule,
     ChatModule,
     GatewayModule,
+    FilesModule,
   ],
   providers: [
     {
