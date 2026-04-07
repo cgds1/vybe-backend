@@ -21,8 +21,8 @@ async function bootstrap() {
 
   // Swagger
   const config = new DocumentBuilder()
-    .setTitle('CineRank API')
-    .setDescription('Backend de CineRank - Reseñas de películas y series')
+    .setTitle('Vybe API')
+    .setDescription('Vybe backend API')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

@@ -1,14 +1,3 @@
-/*
-  Warnings:
-
-  - You are about to drop the column `name` on the `users` table. All the data in the column will be lost.
-  - You are about to drop the column `role` on the `users` table. All the data in the column will be lost.
-  - You are about to drop the `categories` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `comments` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `movie_categories` table. If the table is not empty, all the data it contains will be lost.
-  - You are about to drop the `movies` table. If the table is not empty, all the data it contains will be lost.
-
-*/
 -- CreateEnum
 CREATE TYPE "SwipeAction" AS ENUM ('LIKE', 'PASS');
 
@@ -21,36 +10,22 @@ CREATE TYPE "MessageType" AS ENUM ('TEXT', 'IMAGE');
 -- CreateEnum
 CREATE TYPE "FileAssetType" AS ENUM ('AVATAR', 'CHAT_IMAGE');
 
--- DropForeignKey
-ALTER TABLE "comments" DROP CONSTRAINT "comments_movieId_fkey";
+-- CreateTable
+CREATE TABLE "users" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "refreshToken" TEXT,
+    "isVerified" BOOLEAN NOT NULL DEFAULT false,
+    "verifyCode" TEXT,
+    "verifyCodeExpiry" TIMESTAMP(3),
+    "resetCode" TEXT,
+    "resetCodeExpiry" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
--- DropForeignKey
-ALTER TABLE "comments" DROP CONSTRAINT "comments_userId_fkey";
-
--- DropForeignKey
-ALTER TABLE "movie_categories" DROP CONSTRAINT "movie_categories_categoryId_fkey";
-
--- DropForeignKey
-ALTER TABLE "movie_categories" DROP CONSTRAINT "movie_categories_movieId_fkey";
-
--- AlterTable
-ALTER TABLE "users" DROP COLUMN "name",
-DROP COLUMN "role";
-
--- DropTable
-DROP TABLE "categories";
-
--- DropTable
-DROP TABLE "comments";
-
--- DropTable
-DROP TABLE "movie_categories";
-
--- DropTable
-DROP TABLE "movies";
-
--- DropEnum
-DROP TYPE "Role";
+    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "profiles" (
@@ -154,6 +129,12 @@ CREATE TABLE "file_assets" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE INDEX "users_email_idx" ON "users"("email");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "profiles_userId_key" ON "profiles"("userId");
 
 -- CreateIndex
@@ -233,9 +214,6 @@ CREATE INDEX "file_assets_userId_idx" ON "file_assets"("userId");
 
 -- CreateIndex
 CREATE INDEX "file_assets_type_idx" ON "file_assets"("type");
-
--- CreateIndex
-CREATE INDEX "users_email_idx" ON "users"("email");
 
 -- AddForeignKey
 ALTER TABLE "profiles" ADD CONSTRAINT "profiles_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
