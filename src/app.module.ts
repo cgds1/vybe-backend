@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { DiscoveryModule } from './discovery/discovery.module';
 import { MatchesModule } from './matches/matches.module';
+import { FriendshipsModule } from './friendships/friendships.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
@@ -20,6 +21,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     UsersModule,
     DiscoveryModule,
     MatchesModule,
+    FriendshipsModule,
   ],
   providers: [
     {
