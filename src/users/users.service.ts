@@ -7,15 +7,18 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { CreateProfileDto } from './dto/create-profile.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async getProfile(userId: string) {
+  async getMyProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      include: { profile: true },
     });
     if (!user) throw new NotFoundException('User not found');
 
@@ -23,7 +26,37 @@ export class UsersService {
     return result;
   }
 
-  async updateProfile(userId: string, dto: UpdateUserDto) {
+  async getPublicProfile(userId: string) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId },
+      include: {
+        user: { select: { id: true, email: true, createdAt: true } },
+      },
+    });
+    if (!profile) throw new NotFoundException('Profile not found');
+    return profile;
+  }
+
+  async createProfile(userId: string, dto: CreateProfileDto) {
+    const existing = await this.prisma.profile.findUnique({ where: { userId } });
+    if (existing) throw new ConflictException('Profile already exists');
+
+    return this.prisma.profile.create({
+      data: { userId, ...dto },
+    });
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const existing = await this.prisma.profile.findUnique({ where: { userId } });
+    if (!existing) throw new NotFoundException('Profile not found');
+
+    return this.prisma.profile.update({
+      where: { userId },
+      data: dto,
+    });
+  }
+
+  async updateUser(userId: string, dto: UpdateUserDto) {
     if (dto.email) {
       const existing = await this.prisma.user.findUnique({
         where: { email: dto.email },
@@ -66,5 +99,4 @@ export class UsersService {
       where: { id: userId },
     });
   }
-
 }
