@@ -29,10 +29,9 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   // Redis WebSocket adapter
-  const redisHost = process.env.REDIS_HOST || 'localhost';
-  const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
   const redisIoAdapter = new RedisIoAdapter(app);
-  await redisIoAdapter.connectToRedis(redisHost, redisPort);
+  await redisIoAdapter.connectToRedis(redisUrl);
   app.useWebSocketAdapter(redisIoAdapter);
 
   // Global exception filter

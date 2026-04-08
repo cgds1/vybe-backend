@@ -6,8 +6,7 @@ import { ServerOptions } from 'socket.io';
 export class RedisIoAdapter extends IoAdapter {
   private adapterConstructor: ReturnType<typeof createAdapter>;
 
-  async connectToRedis(host: string, port: number): Promise<void> {
-    const url = `redis://${host}:${port}`;
+  async connectToRedis(url: string): Promise<void> {
     const pubClient = createClient({ url });
     const subClient = pubClient.duplicate();
     await Promise.all([pubClient.connect(), subClient.connect()]);
