@@ -15,6 +15,7 @@ import { GatewayModule } from './gateway/gateway.module';
 import { FilesModule } from './files/files.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { HealthModule } from './health/health.module';
+import { MailModule } from './mail/mail.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
@@ -32,6 +33,8 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
         FIREBASE_PROJECT_ID: Joi.string().required(),
         FIREBASE_CLIENT_EMAIL: Joi.string().required(),
         FIREBASE_PRIVATE_KEY: Joi.string().required(),
+        BREVO_API_KEY: Joi.string().required(),
+        BREVO_FROM_EMAIL: Joi.string().required(),
       }),
     }),
     LoggerModule.forRoot({
@@ -62,6 +65,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     FilesModule,
     NotificationsModule,
     HealthModule,
+    MailModule,
   ],
   providers: [
     {

@@ -92,6 +92,7 @@ async function main() {
       data: {
         email: u.email,
         password: hashedPassword,
+        isVerified: true,
         profile: {
           create: {
             displayName: u.displayName,

@@ -12,7 +12,12 @@ import { JwtService } from '@nestjs/jwt';
 import { MessageType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
-@WebSocketGateway({ cors: { origin: '*' } })
+@WebSocketGateway({
+  cors: {
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    credentials: true,
+  },
+})
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
 

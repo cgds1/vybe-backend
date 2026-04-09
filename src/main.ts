@@ -49,15 +49,17 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger
-  const config = new DocumentBuilder()
-    .setTitle('Vybe API')
-    .setDescription('Vybe backend API')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+  // Swagger (dev only)
+  if (process.env.NODE_ENV !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Vybe API')
+      .setDescription('Vybe backend API')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('docs', app, document);
+  }
 
   await app.listen(process.env.PORT || 3000, '0.0.0.0');
 }

@@ -22,7 +22,7 @@ export class UsersService {
     });
     if (!user) throw new NotFoundException('User not found');
 
-    const { password, refreshToken, ...result } = user;
+    const { password, refreshToken, verifyCode, verifyCodeExpiry, resetCode, resetCodeExpiry, verifyAttempts, resetAttempts, ...result } = user;
     return result;
   }
 
@@ -71,7 +71,7 @@ export class UsersService {
       data: dto,
     });
 
-    const { password, refreshToken, ...result } = user;
+    const { password, refreshToken, verifyCode, verifyCodeExpiry, resetCode, resetCodeExpiry, verifyAttempts, resetAttempts, ...result } = user;
     return result;
   }
 
