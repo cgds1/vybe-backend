@@ -29,6 +29,7 @@ export class NotificationsService {
     recipientId: string,
     title: string,
     body: string,
+    data?: Record<string, string>,
   ): Promise<void> {
     const deviceToken = await this.prisma.deviceToken.findFirst({
       where: { userId: recipientId },
@@ -39,6 +40,7 @@ export class NotificationsService {
       await this.firebase.messaging().send({
         token: deviceToken.token,
         notification: { title, body },
+        data,
       });
     } catch (err) {
       this.logger.error(

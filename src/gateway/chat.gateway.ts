@@ -166,7 +166,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
 
     // Push notification
-    await this.notifications.sendToUser(otherParticipant.userId, title, preview);
+    await this.notifications.sendToUser(otherParticipant.userId, title, preview, {
+      type: 'new_message',
+      chatId,
+      name: title,
+    });
   }
 
   /** Emite un evento a la sala personal de un usuario (usado por otros módulos) */
