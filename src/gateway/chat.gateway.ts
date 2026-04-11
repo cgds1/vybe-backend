@@ -169,6 +169,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     await this.notifications.sendToUser(otherParticipant.userId, title, preview);
   }
 
+  /** Emite un evento a la sala personal de un usuario (usado por otros módulos) */
+  emitToUser(userId: string, event: string, data: unknown): void {
+    this.server.to(`user:${userId}`).emit(event, data);
+  }
+
   @SubscribeMessage('typing')
   handleTyping(
     @ConnectedSocket() socket: Socket,

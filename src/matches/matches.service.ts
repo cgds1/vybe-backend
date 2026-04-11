@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ChatGateway } from '../gateway/chat.gateway';
 import { SwipeDto } from './dto/swipe.dto';
 
 const PROFILE_SELECT = {
@@ -22,6 +23,7 @@ export class MatchesService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private gateway: ChatGateway,
   ) {}
 
   async swipe(userId: string, dto: SwipeDto) {
@@ -64,6 +66,10 @@ export class MatchesService {
       this.prisma.profile.findUnique({ where: { userId: userAId }, select: { displayName: true } }),
       this.prisma.profile.findUnique({ where: { userId: userBId }, select: { displayName: true } }),
     ]);
+
+    // Evento en tiempo real para que la lista de chats se recargue
+    this.gateway.emitToUser(userAId, 'new_match', { withUserId: userBId });
+    this.gateway.emitToUser(userBId, 'new_match', { withUserId: userAId });
 
     await Promise.all([
       this.notifications.sendToUser(
