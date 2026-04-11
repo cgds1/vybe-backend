@@ -41,6 +41,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const payload = this.jwtService.verify<{ sub: string }>(token);
       socket.data.userId = payload.sub;
+      // Sala personal para recibir updates de chat sin estar dentro de un chat
+      socket.join(`user:${payload.sub}`);
     } catch {
       socket.disconnect();
     }
@@ -129,8 +131,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       createdAt: message.createdAt,
     });
 
-    // Push notification al destinatario (fire-and-forget)
-    void this.notifyRecipient(chatId, userId, message.type, content);
+    // Push notification + actualizar lista de chats del destinatario (fire-and-forget)
+    void this.notifyRecipient(chatId, userId, message.type, content, message.createdAt);
   }
 
   private async notifyRecipient(
@@ -138,6 +140,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     senderId: string,
     type: MessageType,
     content: string,
+    sentAt: Date,
   ): Promise<void> {
     const [senderProfile, otherParticipant] = await Promise.all([
       this.prisma.profile.findUnique({
@@ -152,10 +155,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!otherParticipant) return;
 
-    const body = type === MessageType.IMAGE ? '📷 Imagen' : content.slice(0, 100);
+    const preview = type === MessageType.IMAGE ? '📷 Imagen' : content.slice(0, 100);
     const title = senderProfile?.displayName ?? 'Nuevo mensaje';
 
-    await this.notifications.sendToUser(otherParticipant.userId, title, body);
+    // Actualizar lista de chats en tiempo real (sin estar dentro del chat)
+    this.server.to(`user:${otherParticipant.userId}`).emit('chat_updated', {
+      chatId,
+      lastMessage: preview,
+      lastMessageAt: sentAt.toISOString(),
+    });
+
+    // Push notification
+    await this.notifications.sendToUser(otherParticipant.userId, title, preview);
   }
 
   @SubscribeMessage('typing')
