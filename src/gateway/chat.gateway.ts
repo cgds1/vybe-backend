@@ -11,6 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { MessageType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @WebSocketGateway({
   cors: {
@@ -24,6 +25,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private jwtService: JwtService,
     private prisma: PrismaService,
+    private notifications: NotificationsService,
   ) {}
 
   async handleConnection(socket: Socket) {
@@ -126,6 +128,34 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       type: message.type,
       createdAt: message.createdAt,
     });
+
+    // Push notification al destinatario (fire-and-forget)
+    void this.notifyRecipient(chatId, userId, message.type, content);
+  }
+
+  private async notifyRecipient(
+    chatId: string,
+    senderId: string,
+    type: MessageType,
+    content: string,
+  ): Promise<void> {
+    const [senderProfile, otherParticipant] = await Promise.all([
+      this.prisma.profile.findUnique({
+        where: { userId: senderId },
+        select: { displayName: true },
+      }),
+      this.prisma.chatParticipant.findFirst({
+        where: { chatId, NOT: { userId: senderId } },
+        select: { userId: true },
+      }),
+    ]);
+
+    if (!otherParticipant) return;
+
+    const body = type === MessageType.IMAGE ? '📷 Imagen' : content.slice(0, 100);
+    const title = senderProfile?.displayName ?? 'Nuevo mensaje';
+
+    await this.notifications.sendToUser(otherParticipant.userId, title, body);
   }
 
   @SubscribeMessage('typing')

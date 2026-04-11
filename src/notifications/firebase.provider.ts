@@ -8,6 +8,8 @@ export const FirebaseAdminProvider: Provider = {
   provide: FIREBASE_ADMIN,
   inject: [ConfigService],
   useFactory: (config: ConfigService) => {
+    if (admin.apps.length > 0) return admin.app();
+
     const privateKey = config
       .get<string>('FIREBASE_PRIVATE_KEY')!
       .replace(/\\n/g, '\n');
